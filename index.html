@@ -21,6 +21,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:18p
 .logo{font:800 20px 'Bricolage Grotesque',sans-serif;text-decoration:none;letter-spacing:-.02em}
 nav a{margin-left:18px;text-decoration:none;font-weight:500;font-size:15px}
 .btn{display:inline-block;background:var(--acc);color:var(--accink);padding:14px 24px;border-radius:999px;font-weight:600;text-decoration:none;border:0;font-size:16px;cursor:pointer;font-family:inherit}
+.btn:disabled{opacity:.6;cursor:wait}
 .btn.alt{background:transparent;color:var(--ink);border:2px solid var(--ink)}
 .hero{padding:28px 0 56px}
 .hero h1{font-size:clamp(40px,8vw,84px);font-weight:800;letter-spacing:-.035em;max-width:11ch}
@@ -58,6 +59,7 @@ label{font-size:14px;font-weight:600}
 input[type=text],input[type=tel],select,textarea{width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);font:inherit;background:#fff;color:#0e2236}
 .contact .btn{background:var(--acc);color:var(--accink)}
 .contact :focus-visible{outline-color:#fff}
+#st{margin:0;min-height:1.6em;font-weight:600}
 footer{padding:36px 0 48px;color:var(--mut);font-size:15px}
 </style>
 </head>
@@ -122,12 +124,13 @@ footer{padding:36px 0 48px;color:var(--mut);font-size:15px}
     <h2>Cuéntanos de tu auto</h2>
     <p class="lead">Déjanos tus datos y te respondemos con una cotización.</p>
     <form id="f">
-      <div><label for="n">Nombre</label><input id="n" type="text" required></div>
-      <div><label for="t">Teléfono</label><input id="t" type="tel" required></div>
+      <div><label for="n">Nombre</label><input id="n" type="text" required minlength="2" maxlength="100" autocomplete="name"></div>
+      <div><label for="t">Teléfono</label><input id="t" type="tel" required minlength="7" maxlength="20" autocomplete="tel"></div>
       <div><label for="s">Servicio</label>
         <select id="s"><option>Corrección de pintura</option><option>Recubrimiento cerámico</option><option>PPF</option><option>Aún no lo sé</option></select></div>
-      <div><label for="m">Auto (marca, modelo y año)</label><input id="m" type="text"></div>
-      <button class="btn" type="submit">Enviar por WhatsApp</button>
+      <div><label for="m">Auto (marca, modelo y año)</label><input id="m" type="text" maxlength="100"></div>
+      <button class="btn" id="b" type="submit">Enviar solicitud</button>
+      <p id="st" role="status" aria-live="polite"></p>
     </form>
   </div>
 </section>
@@ -140,13 +143,30 @@ footer{padding:36px 0 48px;color:var(--mut);font-size:15px}
 </div>
 
 <script>
+// Dirección de tu API. En local: http://localhost:8000
+// Cuando subas la API a internet, cámbiala por su URL pública (https://...).
+var API_URL = 'http://localhost:8000';
+
 var ba=document.getElementById('ba'),r=ba.querySelector('input');
 r.addEventListener('input',function(){ba.style.setProperty('--p',r.value+'%')});
-document.getElementById('f').addEventListener('submit',function(e){
+
+var form=document.getElementById('f'),btn=document.getElementById('b'),st=document.getElementById('st');
+form.addEventListener('submit',function(e){
   e.preventDefault();
-  var g=function(i){return document.getElementById(i).value};
-  var txt='Hola, soy '+g('n')+' ('+g('t')+'). Me interesa: '+g('s')+'. Auto: '+g('m');
-  window.open('https://wa.me/?text='+encodeURIComponent(txt),'_blank');
+  var g=function(i){return document.getElementById(i).value.trim()};
+  btn.disabled=true;
+  st.textContent='Enviando...';
+  fetch(API_URL+'/api/cotizaciones',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({nombre:g('n'),telefono:g('t'),servicio:g('s'),auto:g('m')})
+  }).then(function(res){
+    if(!res.ok) throw new Error('http '+res.status);
+    form.reset();
+    st.textContent='¡Listo! Recibimos tu solicitud y te contactaremos pronto.';
+  }).catch(function(){
+    st.textContent='No pudimos enviar tu solicitud. Revisa los datos e inténtalo de nuevo.';
+  }).then(function(){btn.disabled=false});
 });
 </script>
 </body>
